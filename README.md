@@ -53,3 +53,7 @@ npm run dev
 ```
 
 The application should now be running locally. Open your browser and go to `http://localhost:5173` to see it in action.
+
+## License
+
+This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
