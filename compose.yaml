@@ -1,0 +1,28 @@
+services:
+  webllmchat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: webllmchat-image:latest
+    container_name: webllmchat-container
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    command: npm run dev -- --host 0.0.0.0
+    restart: always
+    tty: true
+    shm_size: '1gb'
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
