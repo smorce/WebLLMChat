@@ -5,39 +5,79 @@ import {
   InterruptableStoppingCriteria,
 } from "@huggingface/transformers";
 
-/**
- * This class uses the Singleton pattern to enable lazy-loading of the pipeline
- */
 class TextGenerationPipeline {
-  static model_id = "onnx-community/gemma-2-2b-jpn-it";
+  static instances = {};
+  
+  static MODEL_CONFIGS = {
+    'gemma-2-2b-jpn-it': {
+      model_id: "onnx-community/gemma-2-2b-jpn-it",
+      model_config: {
+        dtype: "q4f16",
+        device: "webgpu",
+        use_external_data_format: true
+      },
+      generation_config: {
+        do_sample: false,
+        max_new_tokens: 1024
+      }
+    },
+    'SmolLM2-135M-Instruct': {
+      model_id: "HuggingFaceTB/SmolLM2-135M-Instruct",
+      model_config: {
+        dtype: "fp16",
+        device: "webgpu"
+      },
+      generation_config: {
+        do_sample: true,
+        max_new_tokens: 1024,
+        temperature: 0.2,
+        top_p: 0.9
+      }
+    },
+    'Qwen2.5-0.5B-Instruct': {
+      model_id: "onnx-community/Qwen2.5-0.5B-Instruct", 
+      model_config: {
+        dtype: "q4",
+        device: "webgpu"
+      },
+      generation_config: {
+        do_sample: false,
+        max_new_tokens: 1024
+      }
+    }
+  };
 
-  static async getInstance(progress_callback = null) {
-    this.tokenizer ??= AutoTokenizer.from_pretrained(this.model_id, {
-      progress_callback,
-    });
+  static async getInstance(model_name, progress_callback = null) {
+    if (!this.instances[model_name]) {
+      const config = this.MODEL_CONFIGS[model_name];
+      if (!config) {
+        throw new Error(`Unknown model: ${model_name}`);
+      }
 
-    this.model ??= AutoModelForCausalLM.from_pretrained(this.model_id, {
-      dtype: "q4f16",
-      device: "webgpu",
-      use_external_data_format: true,
-      progress_callback,
-    });
+      const tokenizer = AutoTokenizer.from_pretrained(config.model_id, {
+        progress_callback,
+      });
 
-    return Promise.all([this.tokenizer, this.model]);
+      const model = AutoModelForCausalLM.from_pretrained(config.model_id, {
+        ...config.model_config,
+        progress_callback,
+      });
+
+      this.instances[model_name] = Promise.all([tokenizer, model]);
+    }
+
+    return this.instances[model_name];
   }
 }
 
 const stopping_criteria = new InterruptableStoppingCriteria();
 
-let past_key_values_cache = null;
-async function generate(messages) {
-  // Retrieve the text-generation pipeline.
-  const [tokenizer, model] = await TextGenerationPipeline.getInstance();
+async function generate(messages, model_name = 'gemma-2-2b-jpn-it') {
+  const [tokenizer, model] = await TextGenerationPipeline.getInstance(model_name);
+  const config = TextGenerationPipeline.MODEL_CONFIGS[model_name];
 
-  // システムプロンプトを最初のユーザーメッセージに組み込む
   const processedMessages = messages.reduce((acc, msg, index) => {
     if (index === 1 && messages[0].role === 'system') {
-      // システムプロンプトとユーザーメッセージを結合
       return [{
         role: 'user',
         content: `${messages[0].content}\n\n${msg.content}`
@@ -58,11 +98,11 @@ async function generate(messages) {
   let tps;
   const token_callback_function = () => {
     startTime ??= performance.now();
-
     if (numTokens++ > 0) {
       tps = (numTokens / (performance.now() - startTime)) * 1000;
     }
   };
+
   const callback_function = (output) => {
     self.postMessage({
       status: "update",
@@ -79,29 +119,20 @@ async function generate(messages) {
     token_callback_function,
   });
 
-  // Tell the main thread we are starting
   self.postMessage({ status: "start" });
 
   const { past_key_values, sequences } = await model.generate({
     ...inputs,
-    // TODO: Add when model is fixed
-    // past_key_values: past_key_values_cache,
-
-    // Sampling
-    do_sample: false,
-
-    max_new_tokens: 1024,
+    ...config.generation_config,
     streamer,
     stopping_criteria,
     return_dict_in_generate: true,
   });
-  // past_key_values_cache = past_key_values;
 
   const decoded = tokenizer.batch_decode(sequences, {
     skip_special_tokens: true,
   });
 
-  // Send the output back to the main thread
   self.postMessage({
     status: "complete",
     output: decoded,
@@ -122,16 +153,13 @@ async function check() {
   }
 }
 
-async function load() {
+async function load(model_name = 'gemma-2-2b-jpn-it') {
   self.postMessage({
     status: "loading",
     data: "Loading model...",
   });
 
-  // Load the pipeline and save it for future use.
-  const [tokenizer, model] = await TextGenerationPipeline.getInstance((x) => {
-    // We also add a progress callback to the pipeline so that we can
-    // track model loading.
+  const [tokenizer, model] = await TextGenerationPipeline.getInstance(model_name, (x) => {
     self.postMessage(x);
   });
 
@@ -140,14 +168,13 @@ async function load() {
     data: "Compiling shaders and warming up model...",
   });
 
-  // Run model with dummy input to compile shaders
   const inputs = tokenizer("a");
   await model.generate({ ...inputs, max_new_tokens: 1 });
   self.postMessage({ status: "ready" });
 }
-// Listen for messages from the main thread
+
 self.addEventListener("message", async (e) => {
-  const { type, data } = e.data;
+  const { type, data, model } = e.data;
 
   switch (type) {
     case "check":
@@ -155,12 +182,12 @@ self.addEventListener("message", async (e) => {
       break;
 
     case "load":
-      load();
+      load(model || 'gemma-2-2b-jpn-it');
       break;
 
     case "generate":
       stopping_criteria.reset();
-      generate(data);
+      generate(data, model || 'gemma-2-2b-jpn-it');
       break;
 
     case "interrupt":
@@ -168,7 +195,6 @@ self.addEventListener("message", async (e) => {
       break;
 
     case "reset":
-      // past_key_values_cache = null;
       stopping_criteria.reset();
       break;
   }

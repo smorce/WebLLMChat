@@ -191,9 +191,10 @@ function App() {
       data: [
         { role: "system", content: systemPrompt },
         ...messages
-      ] 
+      ],
+      model: selectedModel
     });
-  }, [messages, isRunning, systemPrompt]);
+  }, [messages, isRunning, systemPrompt, selectedModel]);
 
   // Auto-scroll
   useEffect(() => {
@@ -234,7 +235,11 @@ function App() {
   // Change model
   function handleModelChange(modelId) {
     setSelectedModel(modelId);
-    // 必要に応じてworkerに新しいモデルを通知
+    // 新しいモデルをロード
+    worker.current.postMessage({ 
+      type: "load",
+      model: modelId 
+    });
   }
 
   return IS_WEBGPU_AVAILABLE ? (
