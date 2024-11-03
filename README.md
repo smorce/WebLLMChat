@@ -12,6 +12,11 @@ short_description: Gemma-2-JPN running locally in your browser on WebGPU
 thumbnail: https://huggingface.co/spaces/webml-community/gemma-2-2b-jpn-webgpu/resolve/main/banner.png
 ---
 
+# 使い方
+- ./start_webllmchat.sh で起動させる。
+  - http://localhost:5173/
+
+
 # Gemma 2 JPN WebGPU
 
 A simple React + Vite application for running [gemma-2-2b-jpn-it](onnx-community/gemma-2-2b-jpn-it), a powerful small language model, locally in the browser using Transformers.js and WebGPU-acceleration.
