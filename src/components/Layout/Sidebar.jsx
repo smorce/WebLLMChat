@@ -1,6 +1,16 @@
 import { useState } from 'react';
+import TrashIcon from '../icons/TrashIcon';
+import EditIcon from '../icons/EditIcon';
 
-export default function Sidebar({ conversations, onSelectConversation, onNewChat, activeId, onOpenSettings }) {
+export default function Sidebar({ 
+  conversations, 
+  onSelectConversation, 
+  onNewChat, 
+  activeId, 
+  onOpenSettings,
+  onDeleteConversation,
+  onEditTitle
+}) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // 日付をフォーマットする関数を単純化
@@ -12,6 +22,14 @@ export default function Sidebar({ conversations, onSelectConversation, onNewChat
     const minutes = date.getMinutes().toString().padStart(2, '0');
     
     return `${month}月${day}日 ${hours}:${minutes}`;
+  };
+
+  // タイトルを省略して表示する関数を11文字に変更
+  const truncateTitle = (title) => {
+    if (title.length > 11) {
+      return `${title.substring(0, 11)}...`;
+    }
+    return title;
   };
 
   return (
@@ -30,14 +48,34 @@ export default function Sidebar({ conversations, onSelectConversation, onNewChat
         {conversations.map((conv) => (
           <div
             key={conv.id}
-            onClick={() => onSelectConversation(conv.id)}
-            className={`p-3 hover:bg-gray-700 cursor-pointer ${
+            className={`p-3 hover:bg-gray-700 ${
               activeId === conv.id ? 'bg-gray-700' : ''
-            }`}
+            } flex justify-between items-center group`}
           >
-            <div className="font-medium truncate">{conv.title}</div>
-            <div className="text-sm text-gray-400">
-              {formatDate(conv.timestamp)}
+            <div 
+              onClick={() => onSelectConversation(conv.id)}
+              className="flex-1 cursor-pointer"
+            >
+              <div className="font-medium truncate" title={conv.title}>
+                {truncateTitle(conv.title)}
+              </div>
+              <div className="text-sm text-gray-400">
+                {formatDate(conv.timestamp)}
+              </div>
+            </div>
+            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onEditTitle(conv.id)}
+                className="p-1 hover:bg-gray-600 rounded"
+              >
+                <EditIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onDeleteConversation(conv.id)}
+                className="p-1 hover:bg-gray-600 rounded"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
             </div>
           </div>
         ))}

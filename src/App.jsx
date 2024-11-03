@@ -36,6 +36,9 @@ function App() {
   const [tps, setTps] = useState(null);
   const [numTokens, setNumTokens] = useState(null);
 
+  // New state
+  const [selectedModel, setSelectedModel] = useState('gemma-2-2b-jpn-it');
+
   // Get active conversation
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages || [];
@@ -204,6 +207,36 @@ function App() {
     }
   }, [messages, isRunning]);
 
+  // Delete conversation
+  function handleDeleteConversation(id) {
+    if (confirm('このチャットを削除してもよろしいですか？')) {
+      setConversations(prev => prev.filter(conv => conv.id !== id));
+      if (activeConversationId === id) {
+        setActiveConversationId(null);
+      }
+    }
+  }
+
+  // Edit title
+  function handleEditTitle(id) {
+    const conversation = conversations.find(c => c.id === id);
+    const newTitle = prompt('新しいタイトルを入力してください:', conversation.title);
+    if (newTitle) {
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === id) {
+          return { ...conv, title: newTitle };
+        }
+        return conv;
+      }));
+    }
+  }
+
+  // Change model
+  function handleModelChange(modelId) {
+    setSelectedModel(modelId);
+    // 必要に応じてworkerに新しいモデルを通知
+  }
+
   return IS_WEBGPU_AVAILABLE ? (
     <div className="flex h-screen bg-white dark:bg-gray-900">
       {/* Sidebar */}
@@ -214,6 +247,8 @@ function App() {
           onSelectConversation={setActiveConversationId}
           onNewChat={createNewChat}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onDeleteConversation={handleDeleteConversation}
+          onEditTitle={handleEditTitle}
         />
       )}
 
@@ -288,7 +323,7 @@ function App() {
                   ref={chatContainerRef}
                   className="flex-1 overflow-y-auto scrollbar-thin"
                 >
-                  <Chat messages={messages} />
+                  <Chat messages={messages} selectedModel={selectedModel} onModelChange={handleModelChange} />
                 </div>
 
                 <div className="p-4 border-t dark:border-gray-700">
