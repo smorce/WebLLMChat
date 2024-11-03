@@ -16,6 +16,9 @@ thumbnail: https://huggingface.co/spaces/webml-community/gemma-2-2b-jpn-webgpu/r
 - ./start_webllmchat.sh で起動させる。
   - http://localhost:5173/
 
+# 動画
+
+[![WebLLM Chat Demo](https://img.youtube.com/vi/TOSy55yiwiU/0.jpg)](https://youtu.be/TOSy55yiwiU)
 
 # Gemma 2 JPN WebGPU
 
