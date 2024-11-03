@@ -45,7 +45,7 @@ export default function Chat({
       />
       
       <div className={`flex-1 p-6 max-w-[960px] w-full ${
-        empty ? "flex flex-col items-center justify-end" : "space-y-4"
+        empty ? "flex flex-col items-center justify-end" : "space-y-6"
       }`}>
         {empty ? (
           <div className="text-xl">Ready!</div>
