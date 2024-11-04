@@ -16,6 +16,9 @@ thumbnail: https://huggingface.co/spaces/webml-community/gemma-2-2b-jpn-webgpu/r
 - ./start_webllmchat.sh で起動させる。
   - http://localhost:5173/
 
+# アイリスのプロンプトフォーマット
+USER:{"ロールプレイを開始します。アイリスはこれからYoutubeの配信を始めますので、リスナーと会話してください。 まずはツンツン度5で自己紹介してください。"}
+
 # 動画
 
 [![WebLLM Chat Demo](https://img.youtube.com/vi/TOSy55yiwiU/0.jpg)](https://youtu.be/TOSy55yiwiU)
